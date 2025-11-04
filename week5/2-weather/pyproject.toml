@@ -1,16 +1,17 @@
 [project]
-name = "weather"
-version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
-requires-python = ">=3.13"
+name = "weather"                       # The name of your CDK project/app
+version = "0.1.0"                      # Version number of your project
+description = "Add your description here"  # Short description (optional)
+readme = "README.md"                   # Points to your project's README file
+requires-python = ">=3.13"             # Minimum Python version required
+
 dependencies = [
-    "aws-cdk-lib==2.198.0",
-    "boto3>=1.39.3",
-    "constructs>=10.0.0,<11.0.0",
+    "aws-cdk-lib==2.198.0",            # Core AWS CDK library (contains all AWS constructs)
+    "boto3>=1.39.3",                   # AWS SDK for Python — lets you call AWS APIs
+    "constructs>=10.0.0,<11.0.0",      # Base class for defining AWS CDK resources
 ]
 
 [dependency-groups]
 dev = [
-    "pytest==6.2.5",
+    "pytest==6.2.5",                   # For running unit tests (optional dev dependency)
 ]

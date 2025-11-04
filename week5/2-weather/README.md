@@ -6,9 +6,9 @@
 
 If you have not previously used AWS CDK in this AWS account, you must run the bootstrap:
 
-```bash
+````bash
 uv run cdk bootstrap
-```
+```y
 
 # Deployment
 
@@ -16,7 +16,7 @@ To deploy to your AWS account, run:
 
 ```bash
 uv run cdk deploy
-```
+````
 
 Ensure that you have [AWS CLI configured](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html).
 You can test your AWS session by running

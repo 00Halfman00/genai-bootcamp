@@ -1,194 +1,216 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SSE Chat</title>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin: 40px;
-            background-color: #f7f7f7;
-        }
-        #chat-container {
-            max-width: 600px;
-            margin: auto;
-            background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        textarea {
-            width: 100%;
-            padding: 10px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-            margin-bottom: 10px;
-            box-sizing: border-box;
-        }
-        button {
-            width: 100%;
-            padding: 10px;
-            border: none;
-            background-color: #007bff;
-            color: white;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        button:disabled {
-            background-color: #aaa;
-        }
-        #response-container {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            min-height: 100px;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        .message {
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 6px;
-            line-height: 1.4;
-        }
-        .user-message {
-            background-color: #e7f5ff;
-        }
-        .assistant-message {
-            background-color: #f1f3f5;
-        }
-        .message strong {
-            display: block;
-            margin-bottom: 5px;
-            font-size: 0.9em;
-            color: #495057;
-        }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          Helvetica, Arial, sans-serif;
+        margin: 40px;
+        background-color: #f7f7f7;
+      }
+      #chat-container {
+        max-width: 600px;
+        margin: auto;
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        transition: background-color 0.5s ease; /* smooth transition */
+      }
+      textarea {
+        width: 100%;
+        padding: 10px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        margin-bottom: 10px;
+        box-sizing: border-box;
+      }
+      button {
+        width: 100%;
+        padding: 10px;
+        border: none;
+        background-color: #007bff;
+        color: white;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:disabled {
+        background-color: #aaa;
+      }
+      #response-container {
+        margin-top: 20px;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        min-height: 100px;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+      .message {
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 6px;
+        line-height: 1.4;
+      }
+      .user-message {
+        background-color: #e7f5ff;
+      }
+      .assistant-message {
+        background-color: #f1f3f5;
+      }
+      .message strong {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 0.9em;
+        color: #495057;
+      }
     </style>
-</head>
-<body>
-
+  </head>
+  <body>
     <div id="chat-container">
-        <h1>Chat with AI</h1>
-        <form id="chat-form">
-            <textarea id="prompt-input" rows="4" placeholder="Enter your prompt here..."></textarea>
-            <button type="submit">Send</button>
-        </form>
-        <div id="response-container"></div>
+      <h1>Chat with AI</h1>
+      <form id="chat-form">
+        <textarea
+          id="prompt-input"
+          rows="4"
+          placeholder="Enter your prompt here..."
+        ></textarea>
+        <button type="submit">Send</button>
+      </form>
+      <div id="response-container"></div>
     </div>
 
     <script>
-        const form = document.getElementById('chat-form');
-        const promptInput = document.getElementById('prompt-input');
-        const responseContainer = document.getElementById('response-container');
-        const submitButton = form.querySelector('button');
+      const form = document.getElementById('chat-form');
+      const promptInput = document.getElementById('prompt-input');
+      const responseContainer = document.getElementById('response-container');
+      const submitButton = form.querySelector('button');
 
-        function displayMessage(role, text) {
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message', `${role}-message`);
+      function displayMessage(role, text) {
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message', `${role}-message`);
 
-            const roleStrong = document.createElement('strong');
-            roleStrong.textContent = role.charAt(0).toUpperCase() + role.slice(1);
-            
-            const contentDiv = document.createElement('div');
-            contentDiv.textContent = text;
-            
-            messageDiv.appendChild(roleStrong);
-            messageDiv.appendChild(contentDiv);
-            
-            responseContainer.appendChild(messageDiv);
-            responseContainer.scrollTop = responseContainer.scrollHeight;
-            
-            return contentDiv;
+        const roleStrong = document.createElement('strong');
+        roleStrong.textContent = role.charAt(0).toUpperCase() + role.slice(1);
+
+        const contentDiv = document.createElement('div');
+        contentDiv.textContent = text;
+
+        messageDiv.appendChild(roleStrong);
+        messageDiv.appendChild(contentDiv);
+
+        responseContainer.appendChild(messageDiv);
+        responseContainer.scrollTop = responseContainer.scrollHeight;
+
+        return contentDiv;
+      }
+
+      document.addEventListener('DOMContentLoaded', async () => {
+        try {
+          const response = await fetch('/chat');
+          if (!response.ok)
+            throw new Error(`HTTP error! status: ${response.status}`);
+          const data = await response.json();
+
+          if (data.messages && data.messages.length > 0) {
+            responseContainer.innerHTML = '';
+            data.messages.forEach((msg) => {
+              const fullText = msg.content.map((c) => c.text).join('\n');
+              displayMessage(msg.role, fullText);
+            });
+          }
+        } catch (error) {
+          console.error('Failed to load chat history:', error);
+          responseContainer.innerHTML = 'Error loading chat history.';
         }
+      });
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                const response = await fetch('/chat');
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                const data = await response.json();
-                
-                if (data.messages && data.messages.length > 0) {
-                    responseContainer.innerHTML = '';
-                    data.messages.forEach(msg => {
-                        const fullText = msg.content.map(c => c.text).join('\n');
-                        displayMessage(msg.role, fullText);
-                    });
-                }
-            } catch (error) {
-                console.error('Failed to load chat history:', error);
-                responseContainer.innerHTML = 'Error loading chat history.';
-            }
-        });
+      const chatContainer = document.getElementById('chat-container');
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const prompt = promptInput.value.trim();
-            if (!prompt) return;
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const prompt = promptInput.value.trim();
+        if (!prompt) return;
 
-            displayMessage('user', prompt);
-            promptInput.value = '';
-            submitButton.disabled = true;
+        displayMessage('user', prompt);
+        promptInput.value = '';
+        submitButton.disabled = true;
 
-            const assistantContentDiv = displayMessage('assistant', '...');
+        const assistantContentDiv = displayMessage('assistant', '...');
 
-            try {
-                const response = await fetch('/chat', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ prompt: prompt }),
-                });
+        try {
+          const response = await fetch('/chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ prompt: prompt }),
+          });
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                assistantContentDiv.textContent = '';
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = '';
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
 
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    
-                    buffer += decoder.decode(value, { stream: true });
-                    const messages = buffer.split('\n\n');
-                    buffer = messages.pop();
+          assistantContentDiv.textContent = '';
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
 
-                    for (const message of messages) {
-                        if (message.startsWith('data:')) {
-                            const data = message.substring(5).trim();
-                            try {
-                                const textChunk = JSON.parse(data);
-                                assistantContentDiv.textContent += textChunk;
-                                responseContainer.scrollTop = responseContainer.scrollHeight;
-                            } catch (err) {
-                                console.error("Failed to parse JSON:", data);
-                            }
-                        } else if (message.startsWith('event: error')) {
-                            const dataLine = message.split('\n')[1];
-                            const data = dataLine.substring(5).trim();
-                            const errorPayload = JSON.parse(data);
-                            assistantContentDiv.textContent = `Error: ${errorPayload.error}`;
-                            console.error("Server error:", errorPayload.error);
-                        }
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const messages = buffer.split('\n\n');
+            buffer = messages.pop();
+
+            for (const message of messages) {
+              if (message.startsWith('data:')) {
+                const data = message.substring(5).trim();
+                try {
+                  const textChunk = JSON.parse(data);
+                  assistantContentDiv.textContent += textChunk;
+                  responseContainer.scrollTop = responseContainer.scrollHeight;
+
+                  // --- Temperature detection ---
+                  const tempMatch = textChunk.match(/(\d+)\s*°?F/);
+                  if (tempMatch) {
+                    const temp = parseInt(tempMatch[1], 10);
+                    console.log('temp: ', temp);
+                    if (temp < 50) {
+                      chatContainer.style.backgroundColor = '#cceeff'; // cold blue
+                    } else if (temp > 70) {
+                      chatContainer.style.backgroundColor = '#FFA500'; // warm orange
+                    } else {
+                      chatContainer.style.backgroundColor = '#fff'; // default
                     }
+                  }
+                } catch (err) {
+                  console.error('Failed to parse JSON:', data);
                 }
-            } catch (error) {
-                assistantContentDiv.textContent = 'Error: ' + error.message;
-                console.error('Fetch error:', error);
-            } finally {
-                submitButton.disabled = false;
-                promptInput.focus();
+              } else if (message.startsWith('event: error')) {
+                const dataLine = message.split('\n')[1];
+                const data = dataLine.substring(5).trim();
+                const errorPayload = JSON.parse(data);
+                assistantContentDiv.textContent = `Error: ${errorPayload.error}`;
+                console.error('Server error:', errorPayload.error);
+              }
             }
-        });
+          }
+        } catch (error) {
+          assistantContentDiv.textContent = 'Error: ' + error.message;
+          console.error('Fetch error:', error);
+        } finally {
+          submitButton.disabled = false;
+          promptInput.focus();
+        }
+      });
     </script>
-</body>
+  </body>
 </html>
