@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.13"
 
 [[package]]
@@ -172,11 +172,15 @@ name = "input-validator"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "pydantic" },
     { name = "strands-agents" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "strands-agents", specifier = ">=1.0.1" }]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2.0.0" },
+    { name = "strands-agents", specifier = ">=1.0.1" },
+]
 
 [[package]]
 name = "jmespath"

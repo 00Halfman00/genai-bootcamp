@@ -79,6 +79,7 @@ class Backend(Construct):
         
         # Create the state machine
         state_machine = sfn.StateMachine(self, 'DocumentProcessingWorkflow',
+                                       state_machine_name='DocumentProcessingWorkflow',
                                        definition=validate_input_task,
                                        timeout=Duration.minutes(5))
         

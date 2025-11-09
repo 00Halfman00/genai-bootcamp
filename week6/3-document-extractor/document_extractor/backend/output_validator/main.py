@@ -1,5 +1,6 @@
 import json
 
+
 def handler(event, context):
     """
     Validates the output from the extractor function.
@@ -7,18 +8,18 @@ def handler(event, context):
     """
     print("Validating extracted output...")
     print(f"Event: {json.dumps(event)}")
-    
-    extracted_data = event.get('extracted_data', {})
-    
+
+    extracted_data = event.get("extracted_data", {})
+
     # These fields are required and should not be empty
     required_fields = [
         "BankName",
         "AccountNumber",
         "ClosingBalance",
         "StartDate",
-        "EndDate"
+        "EndDate",
     ]
-    
+
     is_valid = True
     if not extracted_data:
         is_valid = False
@@ -31,11 +32,11 @@ def handler(event, context):
                 break
 
     result = event.copy()
-    result['valid'] = is_valid
-    
+    result["valid"] = is_valid
+
     if is_valid:
         print("Validation successful.")
     else:
         print("Validation failed.")
-        
+
     return result

@@ -4,5 +4,5 @@ version = "0.1.0"
 description = "Document extraction function"
 requires-python = ">=3.13"
 dependencies = [
-    "strands-agents>=1.0.1",
+    "strands-agents>=1.15.0",
 ]
