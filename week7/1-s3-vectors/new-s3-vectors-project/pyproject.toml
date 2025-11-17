@@ -1,0 +1,14 @@
+[project]
+name = "1-s3-vectors"
+version = "0.1.0"
+description = "CDK stack for Bedrock Knowledge Base with S3 vectors"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "aws-cdk-lib==2.202.0",
+    "constructs>=10.0.0,<11.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
