@@ -21,8 +21,7 @@ if state_bucket_name == "":
     raise ValueError("BUCKET_NAME environment variable is not set.")
 logging.getLogger("strands").setLevel(logging.DEBUG)
 logging.basicConfig(
-    format="%(levelname)s | %(name)s | %(message)s", 
-    handlers=[logging.StreamHandler()]
+    format="%(levelname)s | %(name)s | %(message)s", handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -34,15 +33,16 @@ bedrock_model = BedrockModel(
 current_agent: Agent | None = None
 conversation_manager = SlidingWindowConversationManager(
     window_size=10,  # Maximum number of messages to keep
-    should_truncate_results=True, # Enable truncating the tool result when a message is too large for the model's context window 
+    should_truncate_results=True,  # Enable truncating the tool result when a message is too large for the model's context window
 )
 SYSTEM_PROMPT = """
-You are a digital twin of No Juan. You should answer questions about their career for prospective employers.
+You are a digital twin of Oscar. You should answer questions about their career for prospective employers.
 
 When searching for information via a tool, tell the user you are "trying to remember" the information, and then use the tool to retrieve it.
 """
 app = FastAPI()
 question_manager = QuestionManager()
+
 
 def session(id: str) -> Agent:
     tools = [retrieve]
@@ -59,10 +59,12 @@ def session(id: str) -> Agent:
         tools=tools,
     )
 
+
 class ChatRequest(BaseModel):
     prompt: str
 
-@app.post('/api/chat')
+
+@app.post("/api/chat")
 async def chat(chat_request: ChatRequest, request: Request):
     session_id: str = request.cookies.get("session_id", str(uuid.uuid4()))
     agent = session(session_id)
@@ -70,10 +72,11 @@ async def chat(chat_request: ChatRequest, request: Request):
     current_agent = agent  # Store the current agent for use in tools
     response = StreamingResponse(
         generate(agent, session_id, chat_request.prompt, request),
-        media_type="text/event-stream"
+        media_type="text/event-stream",
     )
     response.set_cookie(key="session_id", value=session_id)
     return response
+
 
 async def generate(agent: Agent, session_id: str, prompt: str, request: Request):
     try:
@@ -86,7 +89,8 @@ async def generate(agent: Agent, session_id: str, prompt: str, request: Request)
         error_message = json.dumps({"error": str(e)})
         yield f"event: error\ndata: {error_message}\n\n"
 
-@app.get('/api/chat')
+
+@app.get("/api/chat")
 def chat_get(request: Request):
     session_id = request.cookies.get("session_id", str(uuid.uuid4()))
     agent = session(session_id)
@@ -94,20 +98,24 @@ def chat_get(request: Request):
     # Filter messages to only include first text content
     filtered_messages = []
     for message in agent.messages:
-        if (message.get("content") and 
-            len(message["content"]) > 0 and 
-            "text" in message["content"][0]):
-            filtered_messages.append({
-                "role": message["role"],
-                "content": [{
-                    "text": message["content"][0]["text"]
-                }]
-            })
- 
+        if (
+            message.get("content")
+            and len(message["content"]) > 0
+            and "text" in message["content"][0]
+        ):
+            filtered_messages.append(
+                {
+                    "role": message["role"],
+                    "content": [{"text": message["content"][0]["text"]}],
+                }
+            )
+
     response = Response(
-        content=json.dumps({
-            "messages": filtered_messages,
-        }),
+        content=json.dumps(
+            {
+                "messages": filtered_messages,
+            }
+        ),
         media_type="application/json",
     )
     response.set_cookie(key="session_id", value=session_id)
@@ -121,6 +129,7 @@ async def root():
         content=json.dumps({"message": "OK"}),
         media_type="application/json",
     )
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", "8080")))
