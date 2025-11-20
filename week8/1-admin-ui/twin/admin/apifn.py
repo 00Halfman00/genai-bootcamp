@@ -68,6 +68,7 @@ class ApiFn(Construct):
                     "bedrock:UpdateKnowledgeBase",
                     "bedrock:UpdateDataSource",
                     "bedrock:StartIngestionJob",
+                    "bedrock:GetIngestionJob",
                 ],
                 resources=["*"],  # Adjust as necessary for security
             )

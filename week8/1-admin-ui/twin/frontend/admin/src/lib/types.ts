@@ -23,3 +23,10 @@ export interface SyncResponse {
 	status: string;
 	ingestionJob: IngestionJob | null;
 }
+
+export interface SyncStatus {
+	ingestionJobId: string;
+	knowledgeBaseId: string;
+	dataSourceId: string;
+	status: string;
+}

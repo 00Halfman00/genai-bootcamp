@@ -57,6 +57,16 @@ class SyncResponse(BaseModel):
     ingestionJob: IngestionJob | None = None
 
 
+class SyncStatus(BaseModel):
+    """
+    Represents the status of the latest ingestion job stored in DynamoDB.
+    """
+    ingestionJobId: str
+    knowledgeBaseId: str
+    dataSourceId: str
+    status: str
+
+
 class QuestionManager:
     """
     Manages questions in DynamoDB.
@@ -230,7 +240,7 @@ class QuestionManager:
         - Generates markdown from answered questions.
         - Uploads markdown to S3.
         - Triggers a Bedrock knowledge base sync.
-        - Marks synced questions as processed.
+        - Stores the ingestion job details in DynamoDB.
         :return: A dictionary with the sync status and ingestion job details.
         """
         logger.info("Starting sync to knowledge base")
@@ -259,16 +269,25 @@ class QuestionManager:
                 dataSourceId=self.kb_data_src_id,
                 clientToken=str(uuid.uuid4())
             )
-            logger.info(f"Started ingestion job: {ingestion_job_response}")
+            job = ingestion_job_response['ingestionJob']
+            logger.info(f"Started ingestion job: {job}")
 
-            # The ingestion job is asynchronous. The questions should not be marked
-            # as processed until the job is complete. This should be handled by a
-            # separate process that monitors the job status.
-            # For now, we will not mark them as processed.
+            # Store the job details in DynamoDB
+            status_item = SyncStatus(
+                ingestionJobId=job['ingestionJobId'],
+                knowledgeBaseId=job['knowledgeBaseId'],
+                dataSourceId=job['dataSourceId'],
+                status=job['status']
+            )
+            item_data = status_item.model_dump()
+            item_data['PK'] = 'STATUS'
+            item_data['SK'] = 'LATEST_INGESTION_JOB'
+            self.table.put_item(Item=item_data)
+            logger.info(f"Stored latest ingestion job status: {item_data}")
 
             return {
                 "status": "Sync started",
-                "ingestionJob": ingestion_job_response['ingestionJob']
+                "ingestionJob": job
             }
         except Exception as e:
             logger.error(f"Error during sync to knowledge base: {e}", exc_info=True)
@@ -288,3 +307,77 @@ class QuestionManager:
             markdown_parts.append(f"# Question\n\n{q.question}\n\n# Answer\n\n{q.answer}")
 
         return "\n\n---\n\n".join(markdown_parts)
+
+    def _get_latest_ingestion_job(self) -> SyncStatus | None:
+        """
+        Retrieves the latest ingestion job status from DynamoDB.
+        """
+        try:
+            response = self.table.get_item(
+                Key={'PK': 'STATUS', 'SK': 'LATEST_INGESTION_JOB'}
+            )
+            item = response.get('Item')
+            return SyncStatus(**item) if item else None
+        except Exception as e:
+            logger.error(f"Error getting latest ingestion job from DDB: {e}", exc_info=True)
+            return None
+
+    def _mark_questions_as_processed(self):
+        """
+        Marks all answered questions as processed in DynamoDB.
+        """
+        logger.info("Marking questions as processed")
+        answered_questions = [q for q in self.list_questions() if q.answer]
+        with self.table.batch_writer() as batch:
+            for q in answered_questions:
+                q.processed = True
+                item_data = q.model_dump(exclude_none=True)
+                item_data['PK'] = 'QUESTIONS'
+                item_data['SK'] = q.question_id
+                batch.put_item(Item=item_data)
+        logger.info(f"Marked {len(answered_questions)} questions as processed.")
+
+    def check_sync_status(self) -> dict:
+        """
+        Checks the status of the latest Bedrock ingestion job.
+        If the job is complete, it marks the questions as processed.
+        """
+        logger.info("Checking sync status")
+        latest_job = self._get_latest_ingestion_job()
+        if not latest_job:
+            logger.warning("No latest ingestion job found in DB.")
+            raise ValueError("No sync job has been initiated yet.")
+
+        # If status is already completed, no need to check again.
+        if latest_job.status == 'COMPLETE':
+            logger.info("Latest job already marked as COMPLETED.")
+            return latest_job.model_dump()
+
+        try:
+            response = self.bedrock_agent_client.get_ingestion_job(
+                knowledgeBaseId=latest_job.knowledgeBaseId,
+                dataSourceId=latest_job.dataSourceId,
+                ingestionJobId=latest_job.ingestionJobId
+            )
+            job = response['ingestionJob']
+            logger.info(f"Got ingestion job status from Bedrock: {job}")
+            
+            current_status = job['status']
+            
+            # If status has changed, update it in DynamoDB
+            if current_status != latest_job.status:
+                latest_job.status = current_status
+                item_data = latest_job.model_dump()
+                item_data['PK'] = 'STATUS'
+                item_data['SK'] = 'LATEST_INGESTION_JOB'
+                self.table.put_item(Item=item_data)
+                logger.info(f"Updated job status in DDB to {current_status}")
+
+            # If the job is complete, mark questions as processed
+            if current_status == 'COMPLETE':
+                self._mark_questions_as_processed()
+
+            return job
+        except Exception as e:
+            logger.error(f"Error checking sync status: {e}", exc_info=True)
+            raise

@@ -1,13 +1,14 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import {
 		listQuestions,
 		addQuestion,
 		updateQuestion,
 		deleteQuestion,
-		syncToKnowledgeBase
+		syncToKnowledgeBase,
+		getSyncStatus
 	} from '$lib/api';
-	import type { Question, SyncResponse } from '$lib/types';
+	import type { Question, SyncResponse, SyncStatus } from '$lib/types';
 	import EditQuestionModal from '$lib/components/EditQuestionModal.svelte';
 	import DeleteConfirmModal from '$lib/components/DeleteConfirmModal.svelte';
 	import {
@@ -38,6 +39,7 @@
 	let syncResult: SyncResponse | null = null;
 	let syncError: string | null = null;
 	let isSyncing = false;
+	let syncPollInterval: number | null = null;
 
 	async function loadQuestions() {
 		isLoading = true;
@@ -50,6 +52,55 @@
 			isLoading = false;
 		}
 	}
+
+	async function pollSyncStatus() {
+		console.log('Polling for sync status...');
+		try {
+			const status: SyncStatus = await getSyncStatus();
+			if (status.status === 'COMPLETE') {
+				console.log('Sync completed!');
+				if (syncPollInterval) {
+					clearInterval(syncPollInterval);
+					syncPollInterval = null;
+				}
+				syncResult = { status: 'Sync completed successfully.', ingestionJob: null };
+				syncError = null;
+				showSyncNotification = true;
+				setTimeout(() => (showSyncNotification = false), 5000);
+				await loadQuestions();
+			} else if (status.status === 'FAILED') {
+				console.error('Sync failed!');
+				if (syncPollInterval) {
+					clearInterval(syncPollInterval);
+					syncPollInterval = null;
+				}
+				syncError = 'Sync failed during processing in the backend.';
+				showSyncNotification = true;
+				setTimeout(() => (showSyncNotification = false), 5000);
+			}
+			// If status is still PENDING or IN_PROGRESS, do nothing and let the polling continue.
+		} catch (e: any) {
+			console.error('Error polling sync status:', e);
+			if (syncPollInterval) {
+				clearInterval(syncPollInterval);
+				syncPollInterval = null;
+			}
+			syncError = 'Failed to get sync status.';
+			showSyncNotification = true;
+			setTimeout(() => (showSyncNotification = false), 5000);
+		}
+	}
+
+	onMount(() => {
+		// Check for an ongoing sync when the page loads
+		pollSyncStatus();
+	});
+
+	onDestroy(() => {
+		if (syncPollInterval) {
+			clearInterval(syncPollInterval);
+		}
+	});
 
 	$: unansweredOnly, loadQuestions();
 
@@ -102,9 +153,12 @@
 			syncResult = await syncToKnowledgeBase();
 			showSyncNotification = true;
 			setTimeout(() => (showSyncNotification = false), 5000);
-			await loadQuestions();
+			// Don't reload questions immediately, start polling instead
+			if (!syncPollInterval) {
+				syncPollInterval = setInterval(pollSyncStatus, 10000); // Poll every 10 seconds
+			}
 		} catch (e: any) {
-			syncError = e.message || 'Failed to sync.';
+			syncError = e.message || 'Failed to start sync.';
 			showSyncNotification = true;
 			setTimeout(() => (showSyncNotification = false), 5000);
 		} finally {

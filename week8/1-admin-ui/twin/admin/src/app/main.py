@@ -3,7 +3,7 @@ import logging
 from fastapi import FastAPI, Depends, HTTPException, Header, status
 
 from auth import CognitoValidator
-from questions import Question, QuestionManager, AnswerRequest, AddQuestionRequest, UpdateQuestionRequest, SyncResponse
+from questions import Question, QuestionManager, AnswerRequest, AddQuestionRequest, UpdateQuestionRequest, SyncResponse, SyncStatus
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -157,6 +157,24 @@ async def sync_knowledge_base(current_user: dict = Depends(get_current_user)):
     except Exception as e:
         logger.error(f"Error syncing knowledge base: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An internal error occurred while syncing the knowledge base.")
+
+
+@app.get("/adminapi/sync/status", response_model=SyncStatus)
+async def get_sync_status(current_user: dict = Depends(get_current_user)):
+    """
+    Checks the status of the latest knowledge base sync job.
+
+    Requires authentication.
+    """
+    logger.info("Received request to check sync status")
+    try:
+        return question_manager.check_sync_status()
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error checking sync status: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An internal error occurred while checking sync status.")
+
 
 if __name__ == "__main__":
     import uvicorn

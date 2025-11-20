@@ -1,5 +1,5 @@
 import { fetchAuthSession } from '@aws-amplify/auth';
-import type { Question, UpdateQuestionPayload, SyncResponse } from '$lib/types';
+import type { Question, UpdateQuestionPayload, SyncResponse, SyncStatus } from '$lib/types';
 
 async function getHeaders() {
 	try {
@@ -52,6 +52,24 @@ export async function syncToKnowledgeBase(): Promise<SyncResponse> {
 		const errorBody = await response.text();
 		console.error('Failed to sync to knowledge base:', errorBody);
 		throw new Error(`Failed to sync to knowledge base: ${response.statusText}`);
+	}
+
+	return await response.json();
+}
+
+export async function getSyncStatus(): Promise<SyncStatus> {
+	const headers = await getHeaders();
+	const url = '/adminapi/sync/status';
+
+	const response = await fetch(url, {
+		method: 'GET',
+		headers
+	});
+
+	if (!response.ok) {
+		const errorBody = await response.text();
+		console.error('Failed to get sync status:', errorBody);
+		throw new Error(`Failed to get sync status: ${response.statusText}`);
 	}
 
 	return await response.json();

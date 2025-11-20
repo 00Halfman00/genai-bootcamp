@@ -1,8 +1,11 @@
-from aws_cdk import RemovalPolicy
+from aws_cdk import RemovalPolicy, Duration
 from aws_cdk.aws_s3 import Bucket
 from constructs import Construct
 import aws_cdk.aws_dynamodb as dynamodb
 import aws_cdk.aws_lambda as _lambda
+import aws_cdk.aws_events as events
+import aws_cdk.aws_events_targets as targets
+import aws_cdk.aws_logs as logs
 
 from .cognito import Cognito
 from .apifn import ApiFn
@@ -44,3 +47,39 @@ class Admin(Construct):
 
         self.endpoint = api_fn.endpoint
         self.domain_name = api_fn.domain_name
+
+        # --- Event-Driven Status Update ---
+
+        # 1. Lambda function to handle status updates
+        status_updater_fn = _lambda.Function(
+            self,
+            "StatusUpdaterFunction",
+            runtime=_lambda.Runtime.PYTHON_3_13,
+            architecture=_lambda.Architecture.X86_64,
+            handler="status_updater.handler",
+            code=_lambda.Code.from_asset("twin/admin/src/app"),
+            timeout=Duration.seconds(60),
+            environment={
+                "DDB_TABLE": self.dynamodb_table.table_name,
+            },
+        )
+
+        # 2. Grant the new Lambda permission to write to the DynamoDB table
+        self.dynamodb_table.grant_write_data(status_updater_fn)
+
+        # 3. EventBridge rule to listen for Bedrock KB events
+        rule = events.Rule(
+            self,
+            "BedrockKBIngestionJobRule",
+            event_pattern=events.EventPattern(
+                source=["aws.bedrock"],
+                detail_type=["Bedrock Knowledge Base Ingestion Job State Change"]
+            )
+        )
+
+        # 4. Set the Lambda function as the target for the rule
+        # rule.add_target(targets.LambdaFunction(status_updater_fn))
+
+        # --- DEBUGGING: Send events directly to a CloudWatch Log Group ---
+        log_group = logs.LogGroup(self, "BedrockEventLogGroup")
+        rule.add_target(targets.CloudWatchLogGroup(log_group))
