@@ -261,18 +261,10 @@ class QuestionManager:
             )
             logger.info(f"Started ingestion job: {ingestion_job_response}")
 
-            # Mark questions as processed
-            logger.info("Marking questions as processed")
-            answered_questions = [q for q in self.list_questions() if q.answer]
-            with self.table.batch_writer() as batch:
-                for q in answered_questions:
-                    q.processed = True
-                    item_data = q.model_dump(exclude_none=True)
-                    item_data['PK'] = 'QUESTIONS'
-                    item_data['SK'] = q.question_id
-                    batch.put_item(Item=item_data)
-            
-            logger.info(f"Marked {len(answered_questions)} questions as processed.")
+            # The ingestion job is asynchronous. The questions should not be marked
+            # as processed until the job is complete. This should be handled by a
+            # separate process that monitors the job status.
+            # For now, we will not mark them as processed.
 
             return {
                 "status": "Sync started",
