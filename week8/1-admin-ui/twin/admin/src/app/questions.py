@@ -18,6 +18,8 @@ class Question(BaseModel):
     question: str
     answer: str | None = None
     processed: bool = False
+    user_name: str | None = None
+    user_email: str | None = None
 
 
 class AnswerRequest(BaseModel):
@@ -33,6 +35,8 @@ class AddQuestionRequest(BaseModel):
     """
     question: str
     answer: str | None = None
+    user_name: str | None = None
+    user_email: str | None = None
 
 
 class UpdateQuestionRequest(BaseModel):
@@ -92,9 +96,9 @@ class QuestionManager:
         self.kb_bucket = os.environ.get('KB_INPUT_BUCKET')
         self.kb_id = os.environ.get('KB_ID')
         self.kb_data_src_id = os.environ.get('KB_DATA_SRC_ID')
-        if not self.kb_bucket or not self.kb_id or not self.kb_data_src_id:
-            logger.error("KB_INPUT_BUCKET, KB_ID, or KB_DATA_SRC_ID env vars not set")
-            raise ValueError("KB_INPUT_BUCKET, KB_ID and KB_DATA_SRC_ID environment variables are required.")
+        # KB variables are only required for sync-related methods, so we don't
+        # raise an error here if they are not set. We will check for them
+        # in the methods that need them.
         logger.info(f"KB config: bucket={self.kb_bucket}, id={self.kb_id}, data_src_id={self.kb_data_src_id}")
 
     def list_questions(self, unanswered_only: bool = False) -> list[Question]:
@@ -120,17 +124,21 @@ class QuestionManager:
             logger.error(f"Error querying DynamoDB for questions: {e}", exc_info=True)
             raise
 
-    def add_question(self, question: str, answer: str | None = None) -> Question:
+    def add_question(self, question: str, answer: str | None = None, user_name: str | None = None, user_email: str | None = None) -> Question:
         """
         Adds a new question to DynamoDB. The processed flag is set to False.
 
         :param question: The question text.
         :param answer: The optional answer to the question.
+        :param user_name: The name of the user who asked the question.
+        :param user_email: The email of the user who asked the question.
         :return: The created Question object.
         """
         new_question = Question(
             question=question,
-            answer=answer
+            answer=answer,
+            user_name=user_name,
+            user_email=user_email
         )
 
         item_data = new_question.model_dump(exclude_none=True)
@@ -243,6 +251,10 @@ class QuestionManager:
         - Stores the ingestion job details in DynamoDB.
         :return: A dictionary with the sync status and ingestion job details.
         """
+        if not self.kb_bucket or not self.kb_id or not self.kb_data_src_id:
+            logger.error("Knowledge Base environment variables are not set.")
+            raise ValueError("KB_INPUT_BUCKET, KB_ID and KB_DATA_SRC_ID are required for sync.")
+
         logger.info("Starting sync to knowledge base")
         try:
             markdown_content = self._create_markdown()
